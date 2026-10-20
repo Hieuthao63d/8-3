@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Một đóa hoa ngày 8/3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --sky-1: #3E2A63;
+    --sky-2: #8E4F8F;
+    --sky-3: #E994AE;
+    --sky-4: #FFD6C4;
+    --ink: #FFF4EC;
+    --ink-soft: rgba(255, 244, 236, 0.85);
+    --pill: rgba(62, 42, 99, 0.55);
+    --glow: rgba(255, 140, 185, 0.65);
+    --btn: #FFF4EC;
+    --btn-ink: #6A2453;
+    --focus: #FFD27A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --sky-1: #22173F;
+      --sky-2: #5E3466;
+      --sky-3: #B76A88;
+      --sky-4: #DDA48F;
+      --pill: rgba(34, 23, 63, 0.65);
+      --btn-ink: #3E1A36;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 40%, var(--sky-3) 78%, var(--sky-4) 100%);
+    font-family: "Nunito", system-ui, sans-serif;
+    color: var(--ink);
+  }
+  #scene {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    overflow: visible; touch-action: none; cursor: grab; transform-origin: 0 0;
+    will-change: transform; /* tách SVG thành lớp riêng, không bị vẽ lại khi các lớp phía trên chuyển động */
+    -webkit-user-select: none; user-select: none;
+  }
+  #scene.drawing { cursor: grabbing; }
+  #scene.done { cursor: default; }
+  #scene:focus { outline: none; }
+  #scene:focus-visible { outline: 3px solid var(--focus); outline-offset: -6px; }
+
+  #flowerCanvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #smokeLayer, #rainLayer { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+  .wisp, .rain-petal { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+  .wisp { width: 260px; height: 560px; opacity: 0; }
+  .rain-petal { width: 20px; height: 23px; }
+
+  .hint {
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    background: var(--pill); backdrop-filter: blur(6px);
+    padding: 0.6rem 1.1rem; border-radius: 999px;
+    font-size: 0.95rem; white-space: nowrap; pointer-events: none;
+  }
+
+  .greet {
+    position: fixed; top: 3vh; left: 0; right: 0;
+    display: flex; justify-content: center; pointer-events: none;
+    visibility: hidden;
+  }
+  /* Tấm thiệp nhỏ: kính mờ, viền hồng mảnh */
+  .card {
+    position: relative;
+    width: min(92vw, 470px); text-align: center;
+    padding: 1rem 1.5rem 1.2rem;
+    border-radius: 20px;
+    background: linear-gradient(160deg, rgba(74, 44, 82, 0.72), rgba(48, 26, 60, 0.66));
+    border: 1px solid rgba(255, 214, 232, 0.38);
+    box-shadow: 0 14px 40px rgba(10, 4, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 6px; border-radius: 15px;
+    border: 1px dashed rgba(255, 214, 232, 0.22); pointer-events: none;
+  }
+  .greet .to { margin: 0; font-size: 0.95rem; color: var(--ink-soft); letter-spacing: 0.02em; }
+  .greet h1 {
+    margin: 0.1em 0 0.15em;
+    font-family: "Dancing Script", cursive; font-weight: 700;
+    font-size: clamp(1.8rem, 7vw, 2.7rem); line-height: 1.1; white-space: nowrap;
+    text-shadow: 0 0 22px var(--glow), 0 2px 0 rgba(106, 36, 83, 0.35);
+  }
+  .greet h1 .word { display: inline-block; white-space: nowrap; }
+  .greet h1 .ch { display: inline-block; will-change: transform; }
+  .greet .msg { margin: 0.2rem auto 0; max-width: 38ch; font-size: 0.98rem; line-height: 1.6; }
+  .greet .hearts { display: inline-block; margin-left: 0.25em; white-space: nowrap; }
+  .greet .hearts span { display: inline-block; }
+  .greet .from { margin: 0.5rem 0 0; font-family: "Dancing Script", cursive; font-size: 1.3rem; }
+  .greet .from:empty { display: none; }
+
+  .replay {
+    position: fixed; right: 20px; bottom: 20px;
+    font: 700 0.9rem "Nunito", sans-serif;
+    background: var(--btn); color: var(--btn-ink);
+    border: 0; border-radius: 999px; padding: 0.55rem 1.1rem; cursor: pointer;
+    visibility: hidden; opacity: 0;
+  }
+  .replay:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  @media (max-width: 640px) {
+    .hint { white-space: normal; text-align: center; width: calc(100% - 32px); border-radius: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<svg id="scene" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"
+     tabindex="0" role="application"
+     aria-label="Kéo dây cung và thả tay để bắn vỡ chùm bóng bay. Bàn phím: phím mũi tên lên xuống để ngắm, giữ Space để kéo dây, thả Space để bắn.">
+  <defs>
+    <radialGradient id="sunGlow">
+      <stop offset="0%" stop-color="#FFE7C9" stop-opacity="0.9" />
+      <stop offset="40%" stop-color="#FFC9B0" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#FFB0A8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="halo">
+      <stop offset="0%" stop-color="#FFD9E6" stop-opacity="0.55" />
+      <stop offset="40%" stop-color="#D98BB8" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#8E5BA8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="coreLight">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="30%" stop-color="#FFF1D6" stop-opacity="0.85" />
+      <stop offset="65%" stop-color="#FFB3CB" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#FF8DB4" stop-opacity="0" />
+    </radialGradient>
+    <!-- Cánh hoa trong suốt kiểu thủy tinh: đậm ở gốc, nhạt và trong ở mép -->
+    <linearGradient id="pOuter" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#F7A9C4" stop-opacity="0.55" />
+      <stop offset="60%" stop-color="#E4C6EC" stop-opacity="0.24" />
+      <stop offset="100%" stop-color="#D8D4F2" stop-opacity="0.10" />
+    </linearGradient>
+    <linearGradient id="pMid" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#F7799F" stop-opacity="0.62" />
+      <stop offset="60%" stop-color="#F8B6CF" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#EBDDF8" stop-opacity="0.12" />
+    </linearGradient>
+    <linearGradient id="pCup" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#F0628F" stop-opacity="0.78" />
+      <stop offset="55%" stop-color="#FFA9C4" stop-opacity="0.42" />
+      <stop offset="100%" stop-color="#FFE6F0" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="pCore" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#F2557F" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#FFD3E0" stop-opacity="0.85" />
+    </linearGradient>
+    <linearGradient id="potGlaze" x1="0" x2="1">
+      <stop offset="0%" stop-color="#B9577E" />
+      <stop offset="45%" stop-color="#E07FA2" />
+      <stop offset="100%" stop-color="#9C4569" />
+    </linearGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="2.4" result="b" />
+      <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+    <filter id="headGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="b" />
+      <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+    <filter id="smokeBlur" x="-50%" y="-200%" width="200%" height="500%">
+      <feGaussianBlur stdDeviation="14" />
+    </filter>
+  </defs>
+
+  <circle cx="760" cy="610" r="260" fill="url(#sunGlow)" />
+  <path d="M -2000 662 Q 500 628 3000 662 L 3000 2600 L -2000 2600 Z" fill="#4B3B5E" />
+  <path d="M -2000 690 Q 500 668 3000 690 L 3000 2600 L -2000 2600 Z" fill="#3B2E4D" />
+
+  <g id="bunch"></g>
+
+  <ellipse cx="500" cy="688" rx="110" ry="9" fill="#000" opacity="0.22" />
+  <ellipse cx="500" cy="556" rx="116" ry="17" fill="#F2A3BF" />
+  <ellipse cx="500" cy="557" rx="101" ry="11" fill="#4A3020" />
+  <path d="M 384 556 A 116 17 0 0 0 616 556 L 590 680 Q 500 694 410 680 Z" fill="url(#potGlaze)" />
+  <path d="M 393 600 Q 500 616 607 600" stroke="#FFF4EC" stroke-width="6" fill="none" opacity="0.85" />
+  <path d="M 404 572 Q 410 630 420 676" stroke="#fff" stroke-width="5" fill="none" opacity="0.15" stroke-linecap="round" />
+
+  <!-- Màn tối dần khi hoa nở, để đóa hoa trong suốt phát sáng -->
+  <rect id="veil" x="-3000" y="-3000" width="7000" height="7000" fill="#120C1C" opacity="0" />
+
+  <g id="smokeBack"></g>
+  <g id="heads"></g>
+  <g id="smokeFront"></g>
+  <g id="fx"></g>
+  <g id="preview"></g>
+
+  <g id="recoil">
+    <g id="bow">
+      <circle id="cue" cx="-10" cy="0" r="16" fill="none" stroke="#FFF4EC" stroke-width="2" />
+      <polyline id="bowString" fill="none" stroke="#FFF4EC" stroke-width="2" stroke-linejoin="round" />
+      <g id="nockWrap"><g id="nocked"></g></g>
+      <path id="limb" fill="none" stroke="#7B3F55" stroke-width="10" stroke-linecap="round" />
+      <path id="limbHi" fill="none" stroke="#E7A6BE" stroke-width="3" stroke-linecap="round" />
+      <rect x="23" y="-20" width="16" height="40" rx="5" fill="#4A2236" />
+      <path d="M 23 -10 L 39 -6 M 23 -2 L 39 2 M 23 6 L 39 10" stroke="#C77D9C" stroke-width="2" />
+    </g>
+  </g>
+
+  <g id="flying"></g>
+  <g id="rain"></g>
+</svg>
+
+<div id="smokeLayer" aria-hidden="true"></div>
+<canvas id="flowerCanvas" aria-hidden="true"></canvas>
+<div id="rainLayer" aria-hidden="true"></div>
+
+<p class="hint" id="hint">Kéo dây cung về phía sau rồi thả tay</p>
+
+<div class="greet" id="greet" aria-live="polite">
+  <div class="card" id="card">
+    <p class="to" id="toLine"></p>
+    <h1 id="title">Chúc mừng ngày 8/3</h1>
+    <p class="msg" id="msg"></p>
+    <p class="from" id="fromLine"></p>
+  </div>
+</div>
+
+<button class="replay" id="replay" type="button">Xem lại</button>
+
+<script>
+(() => {
+  // ================= Nội dung lời chúc (có thể sửa ở đây hoặc qua URL) =================
+  // Ví dụ: qua-tang-8-3.html?ten=Lan&tu=Minh&loi=Chúc em luôn vui
+  const params = new URLSearchParams(location.search);
+  const CONFIG = {
+    name: params.get("ten") || "người phụ nữ tuyệt vời",
+    message: params.get("loi") || "Chúc chị Tẻn luôn xinh đẹp, bình an và rạng rỡ như đóa hoa này. Chúc chị Tẻn bắn cung ngày càng có nhiều huy chương và đạt được Top 1 barebow Việt Nam nhennnn",
+    hearts: "💖💖💖",
+    from: params.get("tu") || "",
+  };
+
+  const NS = "http://www.w3.org/2000/svg";
+  const $ = (id) => document.getElementById(id);
+  const svg = $("scene"), bunch = $("bunch"), heads = $("heads"), fx = $("fx"),
+        smokeBack = $("smokeBack"), smokeFront = $("smokeFront"), veil = $("veil"),
+        previewG = $("preview"), flying = $("flying"), rainG = $("rain"), bow = $("bow"), recoil = $("recoil"), limb = $("limb"),
+        limbHi = $("limbHi"), bowString = $("bowString"), nocked = $("nocked"),
+        nockWrap = $("nockWrap"), cue = $("cue"), hint = $("hint"), greet = $("greet"),
+        replayBtn = $("replay"), defs = svg.querySelector("defs");
+
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const BOW = { x: 165, y: 420 };
+  const MAX_PULL = 130, ARROW_LEN = 172, GRAVITY = 620, GROUND_Y = 652, SOIL_Y = 558;
+  const KNOT = { x: 505, y: 322 };
+  const HEAD = { x: 506, y: 352 };
+  const PETAL = "M 0 0 C -20 -12 -24 -40 0 -54 C 24 -40 20 -12 0 0 Z";
+  // Cánh mẫu đơn: bản rộng, mép trên gợn sóng
+  const PEONY = "M 0 0 C -18 -6 -34 -26 -32 -48 Q -27 -60 -17 -56 Q -10 -67 0 -61 Q 10 -67 17 -56 Q 27 -60 32 -48 C 34 -26 18 -6 0 0 Z";
+  const HEART = "M 0 7 C -13 -2 -8 -13 0 -6 C 8 -13 13 -2 0 7 Z";
+  const PINKS = ["#FF8FB1", "#FFB3C7", "#F06292", "#FFD1DC", "#E8446F", "#FFC4A8"];
+
+  const BALLOONS = [
+    { cx: 420, cy: 195, color: "#FF6B8B" },
+    { cx: 476, cy: 140, color: "#FFB3C7" },
+    { cx: 545, cy: 118, color: "#E8446F", heart: true },
+    { cx: 598, cy: 188, color: "#C9A7FF" },
+    { cx: 512, cy: 215, color: "#FFC94D" },
+  ];
+
+  const state = { angle: -32, pull: 0, dragging: false, keyDraw: false, fired: false, popped: false };
+  const arrows = [];
+  let start = null;
+
+  // ---------------- Tiện ích ----------------
+  function el(tag, attrs = {}, parent) {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function mix(a, b, t) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const ch = (s) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
+    return "#" + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, "0")).join("");
+  }
+  let gradId = 0;
+  function petalGrad(base, tip) {
+    const id = "pg" + gradId++;
+    const g = el("linearGradient", { id, x1: 0, y1: 1, x2: 0, y2: 0 }, defs);
+    el("stop", { offset: "0%", "stop-color": base }, g);
+    el("stop", { offset: "100%", "stop-color": tip }, g);
+    return `url(#${id})`;
+  }
+  function toSvg(e) {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function viewBounds() {
+    const m = svg.getScreenCTM().inverse(), p = svg.createSVGPoint();
+    p.x = 0; p.y = 0; const a = p.matrixTransform(m);
+    p.x = innerWidth; p.y = innerHeight; const b = p.matrixTransform(m);
+    return { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
+  }
+  function arrowSVG(off) {
+    return `
+      <line x1="${off}" y1="0" x2="${off + 150}" y2="0" stroke="#FFF4EC" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M ${off + 140} 0 C ${off + 146} -10 ${off + 160} -12 ${off + 172} 0 C ${off + 160} 12 ${off + 146} 10 ${off + 140} 0 Z" fill="#FF6B8B"/>
+      <path d="M ${off + 2} 0 L ${off + 20} -9 L ${off + 30} -9 L ${off + 14} 0 Z" fill="#FFB3C7"/>
+      <path d="M ${off + 2} 0 L ${off + 20} 9 L ${off + 30} 9 L ${off + 14} 0 Z" fill="#F06292"/>`;
+  }
+
+  // ---------------- Bóng bay ----------------
+  const balloons = BALLOONS.map((b) => {
+    const string = el("path", {
+      d: `M ${b.cx} ${b.cy + 46} Q ${(b.cx + KNOT.x) / 2 + rand(-14, 14)} ${(b.cy + KNOT.y) / 2 + 30} ${KNOT.x} ${KNOT.y}`,
+      stroke: "#FFF4EC", "stroke-width": 1.4, fill: "none", opacity: 0.75,
+    }, bunch);
+    const body = el("g", {}, bunch);
+    if (b.heart) {
+      const s = 3.4;
+      el("path", { d: HEART, fill: b.color, transform: `translate(${b.cx} ${b.cy - 2}) scale(${s})` }, body);
+      el("ellipse", { cx: b.cx - 14, cy: b.cy - 14, rx: 6, ry: 10, fill: "#fff", opacity: 0.45, transform: `rotate(-30 ${b.cx - 14} ${b.cy - 14})` }, body);
+    } else {
+      el("ellipse", { cx: b.cx, cy: b.cy, rx: 34, ry: 42, fill: b.color }, body);
+      el("ellipse", { cx: b.cx + 10, cy: b.cy + 8, rx: 22, ry: 30, fill: "#000", opacity: 0.07 }, body);
+      el("ellipse", { cx: b.cx - 12, cy: b.cy - 15, rx: 7, ry: 12, fill: "#fff", opacity: 0.45, transform: `rotate(-22 ${b.cx - 12} ${b.cy - 15})` }, body);
+    }
+    el("path", { d: `M ${b.cx - 5} ${b.cy + 47} L ${b.cx + 5} ${b.cy + 47} L ${b.cx} ${b.cy + 40} Z`, fill: mix(b.color, "#000000", 0.2) }, body);
+    return { ...b, body, string };
+  });
+  const tail = el("path", { d: `M ${KNOT.x} ${KNOT.y} q -8 18 2 34 t -4 34`, stroke: "#FFF4EC", "stroke-width": 1.6, fill: "none", opacity: 0.75 }, bunch);
+  const bunchCenter = balloons.reduce((a, b) => ({ x: a.x + b.cx / balloons.length, y: a.y + b.cy / balloons.length }), { x: 0, y: 0 });
+
+  const dots = Array.from({ length: 11 }, () => el("circle", { r: 3, fill: "#FFF4EC", opacity: 0 }, previewG));
+  nocked.innerHTML = arrowSVG(0);
+
+  // ---------------- Cây cung ----------------
+  function launchParams() {
+    const a = (state.angle * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+    const nx = -10 - state.pull, speed = 420 + state.pull * 9.5;
+    return { x: BOW.x + c * (nx + ARROW_LEN), y: BOW.y + s * (nx + ARROW_LEN), vx: c * speed, vy: s * speed };
+  }
+  function drawPreview() {
+    const show = state.pull > 25 && (state.dragging || state.keyDraw);
+    if (!show) { dots.forEach((d) => d.setAttribute("opacity", 0)); return; }
+    const p = launchParams();
+    dots.forEach((d, i) => {
+      const t = (i + 1) * 0.045;
+      d.setAttribute("cx", p.x + p.vx * t);
+      d.setAttribute("cy", p.y + p.vy * t + 0.5 * GRAVITY * t * t);
+      d.setAttribute("opacity", ((1 - i / dots.length) * 0.6).toFixed(2));
+    });
+  }
+  function drawBow() {
+    const p = state.pull;
+    const tipX = -10 + p * 0.08, tipY = 120 - p * 0.1, ctrl = 72 - p * 0.12;
+    const d = `M ${tipX} ${-tipY} Q ${ctrl} 0 ${tipX} ${tipY}`;
+    limb.setAttribute("d", d); limbHi.setAttribute("d", d);
+    const nx = -10 - p;
+    bowString.setAttribute("points", `${tipX},${-tipY} ${nx},0 ${tipX},${tipY}`);
+    nocked.setAttribute("transform", `translate(${nx} 0)`);
+    bow.setAttribute("transform", `translate(${BOW.x} ${BOW.y}) rotate(${state.angle})`);
+    drawPreview();
+  }
+  function snapBack() {
+    gsap.to(state, { pull: 0, duration: 0.6, ease: "elastic.out(1, 0.28)", onUpdate: drawBow });
+  }
+
+  function fire() {
+    if (state.pull < 25) { snapBack(); drawPreview(); return; }
+    state.fired = true;
+    svg.classList.add("done");
+    gsap.killTweensOf(cue); gsap.set(cue, { autoAlpha: 0 }); // dừng vòng nhấp nháy để SVG không phải vẽ lại liên tục
+    const p = launchParams();
+    const g = el("g", {}, flying);
+    g.innerHTML = arrowSVG(-ARROW_LEN);
+    arrows.push({ g, x: p.x, y: p.y, vx: p.vx, vy: p.vy, homing: true });
+    gsap.set(nockWrap, { autoAlpha: 0 });
+    snapBack();
+    gsap.fromTo(recoil, { x: -8 }, { x: 0, duration: 0.45, ease: "power3.out" });
+    gsap.to(recoil, { autoAlpha: 0, x: -50, duration: 0.9, delay: 1, ease: "power2.in" });
+    gsap.to(hint, { autoAlpha: 0, duration: 0.4 });
+  }
+
+  // ---------------- Vòng lặp vật lý ----------------
+  function balloonPos(b) {
+    return { x: b.cx + gsap.getProperty(bunch, "x"), y: b.cy + gsap.getProperty(bunch, "y") };
+  }
+
+  gsap.ticker.add((time, deltaMs) => {
+    const dt = Math.min(deltaMs / 1000, 0.04);
+    if (state.keyDraw) { state.pull = Math.min(MAX_PULL, state.pull + 170 * dt); drawBow(); }
+
+    for (let i = arrows.length - 1; i >= 0; i--) {
+      const a = arrows[i];
+      if (a.homing) {
+        // Mũi tên được "dẫn đường" nhẹ về chùm bóng: chỉ cần bắn 1 lần là trúng
+        const tx = bunchCenter.x + gsap.getProperty(bunch, "x"), ty = bunchCenter.y + gsap.getProperty(bunch, "y");
+        const dx = tx - a.x, dy = ty - a.y, d = Math.hypot(dx, dy) || 1;
+        const sp = Math.max(900, Math.hypot(a.vx, a.vy));
+        const k = Math.min(1, 6 * dt);
+        a.vx += ((dx / d) * sp - a.vx) * k;
+        a.vy += ((dy / d) * sp - a.vy) * k;
+        if (d < 40) hitBunch(a);
+        for (const b of balloons) {
+          const bp = balloonPos(b), ex = (a.x - bp.x) / 38, ey = (a.y - bp.y) / 46;
+          if (ex * ex + ey * ey <= 1) { hitBunch(a); break; }
+        }
+      } else {
+        a.vy += GRAVITY * dt;
+      }
+      a.x += a.vx * dt; a.y += a.vy * dt;
+      const deg = (Math.atan2(a.vy, a.vx) * 180) / Math.PI;
+      a.g.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${deg})`);
+
+      if (!a.homing && a.y >= GROUND_Y && a.vy > 0) {
+        arrows.splice(i, 1);
+        gsap.to(a.g, { opacity: 0, delay: 0.8, duration: 0.6, onComplete: () => a.g.remove() });
+      } else if (a.x > 2400 || a.x < -1400 || a.y < -900 || a.y > 1400) {
+        arrows.splice(i, 1); a.g.remove();
+        if (!state.popped) hitBunch(a);
+      }
+    }
+  });
+
+  // ---------------- Bóng vỡ, hạt rơi ----------------
+  function hitBunch(a) {
+    a.homing = false;
+    if (state.popped) return;
+    state.popped = true;
+    gsap.killTweensOf(bunch);
+    const order = balloons
+      .map((b) => ({ b, p: balloonPos(b) }))
+      .sort((m, n) => Math.hypot(m.p.x - a.x, m.p.y - a.y) - Math.hypot(n.p.x - a.x, n.p.y - a.y));
+    const SEEDS = 4, total = order.length * SEEDS;
+    let landed = 0;
+    order.forEach(({ b, p }, i) => gsap.delayedCall(i * 0.1, () => popOne(b, p, SEEDS, () => {
+      if (++landed === total) growGarden();
+    })));
+    gsap.to(tail, { opacity: 0, duration: 0.6, delay: 0.5 });
+  }
+
+  function popOne(b, p, nSeeds, onLand) {
+    gsap.to(b.body, { scale: 1.35, opacity: 0, duration: 0.14, ease: "power1.out", transformOrigin: "50% 50%" });
+    gsap.to(b.string, { opacity: 0, duration: 0.5 });
+
+    for (let i = 0; i < 14; i++) {
+      const isHeart = i % 3 === 0;
+      const r = isHeart
+        ? el("path", { d: HEART, fill: b.color }, fx)
+        : el("rect", { x: -3, y: -1.5, width: 6, height: 3, rx: 1, fill: b.color }, fx);
+      const ang = (i / 14) * Math.PI * 2 + rand(-0.2, 0.2), dist = rand(45, 95);
+      gsap.set(r, { x: p.x, y: p.y, rotation: rand(0, 360), scale: isHeart ? 0.8 : 1 });
+      gsap.to(r, {
+        x: p.x + Math.cos(ang) * dist, y: p.y + Math.sin(ang) * dist + 30,
+        rotation: "+=" + rand(180, 540), opacity: 0, duration: rand(0.6, 0.95),
+        ease: "power2.out", onComplete: () => r.remove(),
+      });
+    }
+
+    // Hạt giống phát sáng rơi xuống chậu
+    for (let i = 0; i < nSeeds; i++) {
+      const s = el("circle", { cx: 0, cy: 0, r: 3.6, fill: "#FFE9B0", filter: "url(#glow)" }, fx);
+      gsap.set(s, { x: p.x + rand(-14, 14), y: p.y + rand(-10, 10) });
+      const dur = rand(1.0, 1.4);
+      gsap.timeline({ delay: 0.08 + i * 0.07, onComplete: () => { s.remove(); onLand(); } })
+        .to(s, { y: "-=26", duration: 0.22, ease: "power1.out" }, 0)
+        .to(s, { y: SOIL_Y - 2, duration: dur, ease: "power2.in" }, 0.22)
+        .to(s, { x: 500 + rand(-30, 30), duration: dur + 0.22, ease: "sine.inOut" }, 0)
+        .to(s, { scale: 1.8, opacity: 0, duration: 0.3, ease: "power1.out" });
+    }
+  }
+
+  // ================= Đóa mẫu đơn vẽ bằng Canvas =================
+  // Tối ưu hiệu năng:
+  // - Mỗi đầu hoa được vẽ vào một canvas riêng (bộ nhớ đệm). Chỉ vẽ lại khi cánh đang mở,
+  //   và tối đa 2 bông mỗi khung hình. Khi hoa nở xong thì không vẽ lại nữa.
+  // - Mỗi khung hình chỉ cần dán các ảnh đệm đó lên màn hình kèm chuyển động đung đưa, rất nhẹ.
+  // - Hiệu ứng phát sáng dùng ảnh thu nhỏ rồi phóng to (thay cho bộ lọc blur tốn kém).
+  const cvs = $("flowerCanvas"), ctx = cvs.getContext("2d");
+  const temp = document.createElement("canvas"), tctx = temp.getContext("2d");
+  let DPR = Math.min(1.5, window.devicePixelRatio || 1);
+  function fitCanvas() {
+    DPR = Math.min(1.5, window.devicePixelRatio || 1);
+    cvs.width = Math.round(innerWidth * DPR); cvs.height = Math.round(innerHeight * DPR);
+  }
+  fitCanvas();
+  addEventListener("resize", () => { fitCanvas(); if (F.on) F.res = targetRes(); });
+
+  const DEG = Math.PI / 180;
+  const STEM_BASE_Y = SOIL_Y - HEAD.y;  // gốc thân (đất) trong hệ toạ độ hoa
+  const PIVOT_Y = 55;                   // điểm nối thân - đầu hoa (đơn vị cánh)
+  const H = { x: -290, y: -300, w: 580, h: 620 }; // khung vẽ của một đầu hoa (đơn vị cánh)
+  const ZOOM = { w: 760, h: 532 };
+  const F = { on: false, res: 1 };
+
+  // "Máy quay": thay vì đổi viewBox mỗi khung hình (buộc trình duyệt vẽ lại toàn bộ SVG),
+  // ta phóng to SVG bằng CSS transform (GPU làm), rồi khi zoom xong mới đặt viewBox một lần cho nét.
+  const cam = { x: 0, y: 0, w: 1000, h: 700 };
+  function camMap() {
+    const s = Math.min(innerWidth / cam.w, innerHeight / cam.h);
+    return { s, ox: (innerWidth - cam.w * s) / 2 - cam.x * s, oy: (innerHeight - cam.h * s) / 2 - cam.y * s };
+  }
+  function applyCam() {
+    const vb = svg.viewBox.baseVal;
+    const s0 = Math.min(innerWidth / vb.width, innerHeight / vb.height);
+    const ox0 = (innerWidth - vb.width * s0) / 2 - vb.x * s0, oy0 = (innerHeight - vb.height * s0) / 2 - vb.y * s0;
+    const c = camMap(), k = c.s / s0;
+    svg.style.transform = Math.abs(k - 1) < 1e-4 && Math.abs(c.ox - ox0) < 0.1 && Math.abs(c.oy - oy0) < 0.1
+      ? "" : `translate(${c.ox - k * ox0}px, ${c.oy - k * oy0}px) scale(${k})`;
+  }
+  addEventListener("resize", applyCam);
+  function targetRes() {
+    const scale = Math.min(innerWidth / ZOOM.w, innerHeight / ZOOM.h); // px CSS / đơn vị khi đã zoom
+    return Math.min(2.2, scale * DPR);
+  }
+
+  // Ảnh quầng sáng vẽ sẵn một lần
+  const glowSprite = document.createElement("canvas");
+  glowSprite.width = glowSprite.height = 128;
+  (() => {
+    const g = glowSprite.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, "rgba(255,240,226,0.3)"); gr.addColorStop(0.35, "rgba(255,190,210,0.16)"); gr.addColorStop(1, "rgba(255,160,200,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  })();
+  const moteSprite = document.createElement("canvas");
+  moteSprite.width = moteSprite.height = 32;
+  (() => {
+    const g = moteSprite.getContext("2d"), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,230,240,0.8)"); gr.addColorStop(1, "rgba(255,200,225,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+  })();
+
+  let seed = 20260308;
+  const srand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const sr = (a, b) => a + srand() * (b - a);
+
+  const TYPES = {
+    outer: {
+      stops: [[0, "rgba(64,54,86,0.66)"], [0.45, "rgba(100,88,124,0.44)"], [0.8, "rgba(178,144,182,0.40)"], [1, "rgba(255,206,226,0.62)"]],
+      nv: 30, vw: 0.36, vc: "rgba(255,240,250,0.46)", rw: 0.9, rc: "rgba(255,232,242,0.9)",
+      sTop: 0.58, a0: 0.5, l0: 0.5, w0: 0.4, hl: 0, curl: false,
+    },
+    cupBack: {
+      stops: [[0, "rgba(246,220,226,0.98)"], [0.5, "rgba(236,168,188,0.97)"], [1, "rgba(248,198,214,0.97)"]],
+      nv: 9, vw: 0.5, vc: "rgba(170,60,100,0.16)", rw: 0.8, rc: "rgba(255,236,242,0.75)",
+      sTop: 0.5, a0: 1, l0: 0.85, w0: 0.75, hl: 0.12, shadow: "rgba(90,20,50,0.45)", curl: true,
+    },
+    cup: {
+      stops: [[0, "rgba(252,226,230,0.99)"], [0.4, "rgba(250,206,216,0.98)"], [0.85, "rgba(242,180,198,0.97)"], [1, "rgba(255,222,232,0.97)"]],
+      nv: 9, vw: 0.5, vc: "rgba(190,80,115,0.16)", rw: 0.8, rc: "rgba(255,242,246,0.85)",
+      sTop: 0.5, a0: 1, l0: 0.85, w0: 0.75, hl: 0.22, shadow: "rgba(110,30,60,0.42)", curl: true,
+    },
+    core: {
+      stops: [[0, "rgba(228,112,146,0.96)"], [1, "rgba(250,176,196,0.95)"]],
+      nv: 6, vw: 0.45, vc: "rgba(140,30,70,0.22)", rw: 0.7, rc: "rgba(255,220,232,0.8)",
+      sTop: 0.6, a0: 0, l0: 0.3, w0: 0.4, hl: 0.15, shadow: "rgba(90,10,40,0.5)", curl: true,
+    },
+  };
+
+  function mkPetal(type, th, L, W, bx, by, d, span, extra = {}) {
+    const T = TYPES[type];
+    const k1 = sr(0, 6), k2 = sr(0, 6), k3 = sr(0, 6), nphi = sr(0.4, 2.7), nphi2 = sr(0.4, 2.7);
+    const rf = (phi) =>
+      0.05 * Math.sin(6 * phi + k1) + 0.035 * Math.sin(11 * phi + k2) + 0.02 * Math.sin(19 * phi + k3)
+      - 0.09 * Math.exp(-(((phi - nphi) / 0.05) ** 2)) - 0.06 * Math.exp(-(((phi - nphi2) / 0.04) ** 2));
+    const s1 = sr(0, 6), s2 = sr(0, 6);
+    const sw = (u, side) => 1 + 0.035 * Math.sin(u * 9 + (side > 0 ? s1 : s2)) + 0.02 * Math.sin(u * 17 + s2);
+    const vj = Array.from({ length: T.nv }, () => sr(-1, 1));
+    return {
+      ...T, type, th, L: L * sr(0.94, 1.06), W: W * sr(0.94, 1.06), bx, by, d, span, rf, vj, sw,
+      th0: th * (type === "outer" ? 0.22 : type === "core" ? 0.2 : 0.55),
+      sk: sr(-0.12, 0.12), ws: sr(0, 6), ...extra,
+    };
+  }
+
+  // Bố cục nhìn nghiêng 3/4: quả cầu cánh hồng ở giữa, cánh ngoài trong suốt xòe rộng
+  function buildPetals() {
+    const outerAngles = [-122, -98, -74, -50, -26, 24, 48, 72, 96, 120];
+    const P = {
+    outerBack: outerAngles.map((t, i) => mkPetal("outer", t + sr(-5, 5), Math.abs(t) < 40 ? sr(170, 190) : sr(205, 240), sr(150, 175),
+      Math.sin(t * DEG) * 34, 34 - Math.cos(t * DEG) * 22, sr(0, 0.12), 0.72)),
+    cupBack: [-52, -26, 0, 26, 52].map((t, i) => mkPetal("cupBack", t, 148, 140, Math.sin(t * DEG) * 22, 40, 0.18 + i * 0.025, 0.6)),
+    core: Array.from({ length: 9 }, (_, i) => mkPetal("core", -52 + i * 13 + sr(-4, 4), sr(52, 66), sr(48, 60), sr(-14, 14), -16, 0.5 + sr(0, 0.08), 0.45)),
+    cupSide: [mkPetal("cup", -74, 128, 120, -20, 50, 0.22, 0.6), mkPetal("cup", 74, 126, 120, 20, 50, 0.24, 0.6)],
+    cupFront: [mkPetal("cup", -38, 120, 130, -14, 62, 0.3, 0.6), mkPetal("cup", 38, 118, 130, 14, 62, 0.32, 0.6)],
+    cupCenter: [mkPetal("cup", 2, 104, 150, 0, 74, 0.36, 0.6)],
+    outerFront: [-146, 150].map((t) => mkPetal("outer", t + sr(-4, 4), sr(190, 215), sr(150, 168),
+      Math.sin(t * DEG) * 30, 92, sr(0.06, 0.14), 0.74)),
+    };
+    const stamens = Array.from({ length: 46 }, () => ({
+    x: sr(-26, 26), y: sr(-70, -44), c: sr(-6, 6), r: sr(0.9, 1.8),
+  }));
+    return { P, stamens };
+  }
+
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+  const local = (pt, fl) => {
+    const k = easeOut(clamp((fl.st.p * fl.maxP - pt.d) / pt.span, 0, 1));
+    return fl.maxP < 1 && pt.type === "outer" ? k * 0.35 : k; // nụ: cánh ngoài vẫn ôm sát
+  };
+
+  function edgePt(p, L, W, phi, r = 1) {
+    const rr = (1 + p.rf(phi)) * r;
+    return [Math.cos(phi) * (W / 2) * rr, -L * p.sTop - Math.sin(phi) * L * (1 - p.sTop) * rr];
+  }
+  function petalPath(c, p, L, W) {
+    c.beginPath(); c.moveTo(0, 0);
+    const hw = (u, side) => (W / 2) * (0.1 + 0.9 * Math.pow(Math.sin(u * Math.PI / 2), 0.75)) * p.sw(u, side);
+    c.lineTo(-W * 0.05, 0);
+    for (let i = 1; i <= 14; i++) c.lineTo(-hw(i / 14, -1), -L * p.sTop * (i / 14));
+    for (let i = 0; i <= 48; i++) { const [x, y] = edgePt(p, L, W, Math.PI * (1 - i / 48)); c.lineTo(x, y); }
+    for (let i = 14; i >= 1; i--) c.lineTo(hw(i / 14, 1), -L * p.sTop * (i / 14));
+    c.lineTo(W * 0.05, 0);
+    c.closePath();
+  }
+
+  function drawPetal(c, p, px, t, fl) {
+    const k = local(p, fl);
+    if (p.a0 === 0 && k <= 0) return;
+    const wob = reduceMotion ? 0 : Math.sin(t * 0.9 + p.ws) * 0.014 * fl.st.p;
+    const th = (p.th0 + (p.th - p.th0) * k) * DEG + wob;
+    const L = p.L * (p.l0 + (1 - p.l0) * k), W = p.W * (p.w0 + (1 - p.w0) * k);
+    c.save();
+    c.translate(p.bx, p.by); c.rotate(th); c.transform(1, 0, p.sk, 1, 0, 0);
+    c.globalAlpha = p.a0 + (1 - p.a0) * k;
+
+    if (p.shadow) {
+      // bóng đổ giả (không dùng shadowBlur cho nhẹ): hai lớp mờ lệch xuống dưới
+      const a = c.globalAlpha;
+      c.fillStyle = p.shadow;
+      [[4, 1.05, 0.35], [2, 1.02, 0.5]].forEach(([dy, sc, al]) => {
+        c.save(); c.translate(0, dy); c.scale(sc, 1.01); c.globalAlpha = a * al;
+        petalPath(c, p, L, W); c.fill(); c.restore();
+      });
+    }
+    petalPath(c, p, L, W);
+    const g = c.createLinearGradient(0, 0, 0, -L);
+    p.stops.forEach(([o, col]) => g.addColorStop(o, col));
+    c.fillStyle = g; c.fill();
+
+    if (p.hl) {
+      const h = c.createRadialGradient(-W * 0.08, -L * 0.48, 0, 0, -L * 0.48, W * 0.62);
+      h.addColorStop(0, `rgba(255,252,252,${p.hl})`); h.addColorStop(1, "rgba(255,252,252,0)");
+      c.fillStyle = h; c.fill();
+    }
+
+    // Gân cánh
+    c.save(); c.clip();
+    // gân mờ dần về phía gốc để không tụ thành một điểm nhọn
+    const vg = c.createLinearGradient(0, 0, 0, -L);
+    vg.addColorStop(0, "rgba(255,255,255,0)"); vg.addColorStop(0.28, p.vc); vg.addColorStop(1, p.vc);
+    c.lineWidth = p.vw; c.strokeStyle = vg; c.beginPath();
+    const vstep = fl.st.p >= 1 ? 1 : 2; // khi đang mở: vẽ một nửa số gân cho nhanh
+    for (let i = 0; i < p.nv; i += vstep) {
+      const phi = Math.PI * (1 - (i + 0.5) / p.nv);
+      const [ex, ey] = edgePt(p, L, W, phi, 0.985);
+      c.moveTo(ex * 0.06, -L * 0.04);
+      c.quadraticCurveTo(ex * 0.28 + p.vj[i] * W * 0.05, ey * 0.55, ex, ey);
+    }
+    c.stroke();
+    if (p.type === "outer") {
+      // lớp gân mịn thứ hai cho cảm giác "x-quang"
+      c.globalAlpha *= 0.5; c.beginPath();
+      for (let i = 0; i < p.nv; i += vstep) {
+        const phi = Math.PI * (1 - (i + 1) / p.nv);
+        const [ex, ey] = edgePt(p, L, W, phi, 0.97);
+        c.moveTo(ex * 0.08, -L * 0.15); c.quadraticCurveTo(ex * 0.4, ey * 0.6, ex, ey);
+      }
+      c.stroke();
+    }
+    c.restore();
+
+    // Viền sáng
+    petalPath(c, p, L, W);
+    c.lineWidth = p.rw; c.strokeStyle = p.rc; c.stroke();
+
+    // Mép cánh cuộn
+    if (p.curl) {
+      c.beginPath();
+      for (let i = 0; i <= 30; i++) { const [x, y] = edgePt(p, L, W, Math.PI * (0.9 - 0.8 * i / 30), 0.955); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.lineWidth = W * 0.07; c.strokeStyle = "rgba(255,238,244,0.5)"; c.lineCap = "round"; c.stroke();
+      c.beginPath();
+      for (let i = 0; i <= 30; i++) { const [x, y] = edgePt(p, L, W, Math.PI * (0.88 - 0.76 * i / 30), 0.9); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.lineWidth = 0.6; c.strokeStyle = "rgba(150,50,85,0.28)"; c.stroke();
+    }
+    c.restore();
+  }
+
+  function drawStem(c, fl) {
+    const g = fl.st.stem; if (g <= 0) return;
+    const x0 = fl.sx, y0 = STEM_BASE_Y, x1 = fl.hx + 2, y1 = fl.hy + PIVOT_Y * fl.fs;
+    const cx1 = x0 + fl.bend * 0.6, cy1 = y0 - (y0 - y1) * 0.35, cx2 = x1 - fl.bend * 0.3, cy2 = y1 + (y0 - y1) * 0.35;
+    const bez = (t) => {
+      const u = 1 - t;
+      return [u * u * u * x0 + 3 * u * u * t * cx1 + 3 * u * t * t * cx2 + t * t * t * x1,
+              u * u * u * y0 + 3 * u * u * t * cy1 + 3 * u * t * t * cy2 + t * t * t * y1];
+    };
+    const line = (w, col) => {
+      c.beginPath();
+      for (let i = 0; i <= 40; i++) { const [x, y] = bez((i / 40) * g); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.lineWidth = w; c.strokeStyle = col; c.lineCap = "round"; c.stroke();
+    };
+    const sw = 0.6 + 0.4 * fl.fs / 0.62;
+    line(5 * sw, "rgba(200,170,190,0.38)");
+    line(2.2 * sw, "rgba(236,206,220,0.55)");
+    line(0.6, "rgba(255,240,246,0.9)");
+
+    const lk = clamp((g - 0.45) / 0.5, 0, 1);
+    if (lk > 0 && fl.leaf) {
+      const [lx, ly] = bez(fl.leaf.at);
+      const ls = easeOut(lk) * fl.leaf.s;
+      c.save(); c.translate(lx, ly); c.rotate(fl.leaf.rot * DEG); c.scale(ls, ls);
+      c.beginPath(); c.moveTo(0, 0);
+      c.quadraticCurveTo(9, -40, 2, -92); c.quadraticCurveTo(-6, -40, 0, 0);
+      const lg = c.createLinearGradient(0, 0, 0, -92);
+      lg.addColorStop(0, "rgba(190,160,180,0.55)"); lg.addColorStop(1, "rgba(255,200,220,0.35)");
+      c.fillStyle = lg; c.fill();
+      c.lineWidth = 0.6; c.strokeStyle = "rgba(255,236,244,0.8)"; c.stroke();
+      c.beginPath(); c.moveTo(0, -2); c.quadraticCurveTo(3, -45, 2, -88);
+      c.lineWidth = 0.5; c.stroke();
+      c.restore();
+    }
+  }
+
+  function headXf(c, t, fl) {
+    const sway = reduceMotion ? 0 : Math.sin(t * 0.55 + fl.ph) * 0.012;
+    c.translate(fl.sx, STEM_BASE_Y); c.rotate(sway); c.translate(-fl.sx, -STEM_BASE_Y);
+  }
+  function headScale(c, t, fl) {
+    const breath = reduceMotion ? 1 : 1 + Math.sin(t * 1.6 + fl.ph) * 0.012 * fl.st.glow;
+    const k = fl.fs * fl.st.bud * breath;
+    c.translate(fl.hx, fl.hy + PIVOT_Y * fl.fs); c.rotate(fl.tilt * DEG); c.scale(k, k); c.translate(0, -PIVOT_Y);
+  }
+  function tint(c, fl) {
+    if (!fl.tint) return;
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = "source-atop"; c.fillStyle = fl.tint;
+    c.fillRect(0, 0, c.canvas.width, c.canvas.height);
+    c.restore();
+  }
+
+  // Vẽ đầu hoa vào canvas đệm của riêng nó (gọi khi cánh đang mở)
+  function renderHead(fl) {
+    // Khi cánh đang mở: vẽ ở độ phân giải thấp hơn (nhanh gấp ~2 lần, mắt khó nhận ra vì đang chuyển động).
+    // Khi đã nở xong: vẽ lại một lần ở độ phân giải đầy đủ cho sắc nét.
+    const q = fl.st.p >= 1 ? 1 : 0.55;
+    const r = F.res * fl.fs * q;
+    const w = Math.ceil(H.w * r), h = Math.ceil(H.h * r);
+    if (!fl.hc) {
+      fl.hc = document.createElement("canvas"); fl.hcx = fl.hc.getContext("2d");
+      fl.bc = document.createElement("canvas"); fl.bcx = fl.bc.getContext("2d");
+    }
+    if (fl.hc.width !== w || fl.hc.height !== h) {
+      fl.hc.width = w; fl.hc.height = h;
+      fl.bc.width = Math.max(1, Math.ceil(w / 12)); fl.bc.height = Math.max(1, Math.ceil(h / 12));
+    }
+    if (temp.width < w || temp.height < h) { temp.width = Math.max(temp.width, w); temp.height = Math.max(temp.height, h); }
+    const prep = (c) => { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h); c.setTransform(r, 0, 0, r, -H.x * r, -H.y * r); };
+    const t = 0, { P, stamens } = fl, c = fl.hcx;
+
+    prep(c);
+    P.outerBack.forEach((p) => drawPetal(c, p, r, t, fl));
+
+    prep(tctx);
+    P.cupBack.forEach((p) => drawPetal(tctx, p, r, t, fl));
+    P.core.forEach((p) => drawPetal(tctx, p, r, t, fl));
+    const sk = clamp((fl.st.p * fl.maxP - 0.6) / 0.35, 0, 1);
+    if (sk > 0) {
+      tctx.save(); tctx.globalAlpha = sk;
+      tctx.lineWidth = 0.5; tctx.strokeStyle = "rgba(246,200,120,0.85)"; tctx.beginPath();
+      stamens.forEach((s) => { tctx.moveTo(s.x * 0.3, -34); tctx.quadraticCurveTo(s.x * 0.6 + s.c, (s.y - 34) / 2, s.x, s.y); });
+      tctx.stroke();
+      tctx.fillStyle = "rgba(255,226,150,0.95)"; tctx.beginPath();
+      stamens.forEach((s) => { tctx.moveTo(s.x + s.r, s.y); tctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); });
+      tctx.fill();
+      tctx.restore();
+    }
+    P.cupSide.forEach((p) => drawPetal(tctx, p, r, t, fl));
+    P.cupFront.forEach((p) => drawPetal(tctx, p, r, t, fl));
+    P.cupCenter.forEach((p) => drawPetal(tctx, p, r, t, fl));
+    tctx.globalCompositeOperation = "source-atop";
+    const sh = tctx.createRadialGradient(-6, 0, 10, 0, -10, 165);
+    sh.addColorStop(0, "rgba(255,248,236,0.38)");
+    sh.addColorStop(0.45, "rgba(255,214,226,0.05)");
+    sh.addColorStop(0.8, "rgba(196,92,132,0.22)");
+    sh.addColorStop(1, "rgba(120,40,80,0.45)");
+    tctx.fillStyle = sh; tctx.fillRect(-220, -230, 440, 400);
+    tctx.globalCompositeOperation = "source-over";
+
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(temp, 0, 0, w, h, 0, 0, w, h); c.restore();
+    P.outerFront.forEach((p) => drawPetal(c, p, r, t, fl));
+    tint(c, fl);
+
+    // bản thu nhỏ để làm quầng phát sáng
+    fl.bcx.clearRect(0, 0, fl.bc.width, fl.bc.height);
+    fl.bcx.drawImage(fl.hc, 0, 0, fl.bc.width, fl.bc.height);
+    fl.lastP = fl.st.p; fl.lastRes = F.res * q;
+  }
+
+  // Bụi sáng bay lên từ lòng hoa (vẽ trên canvas, không dùng SVG filter)
+  const motes = [];
+  let moteOn = false, moteAcc = 0;
+  const twinkles = [], bursts = [];
+  let twinkleOn = false, twAcc = 0;
+  const starSprite = document.createElement("canvas");
+  starSprite.width = starSprite.height = 32;
+  (() => {
+    const g = starSprite.getContext("2d");
+    g.translate(16, 16); g.fillStyle = "#FFF6D8";
+    g.beginPath(); g.moveTo(0, -15); g.lineTo(3, -3); g.lineTo(15, 0); g.lineTo(3, 3); g.lineTo(0, 15); g.lineTo(-3, 3); g.lineTo(-15, 0); g.lineTo(-3, -3); g.closePath(); g.fill();
+  })();
+
+  // Bó hoa: thứ tự từ sau ra trước. hx, hy là vị trí đầu hoa so với bông chính.
+  const BOUQUET = [
+    { name: "budL", hx: -128, hy: -96, fs: 0.3, tilt: -22, sx: -6, bend: -40, maxP: 0.45, tint: "rgba(190,150,255,0.10)", delay: 2.4 },
+    { name: "budR", hx: 132, hy: -84, fs: 0.32, tilt: 24, sx: 6, bend: 40, maxP: 0.5, tint: "rgba(255,160,140,0.08)", delay: 2.8 },
+    { name: "left", hx: -170, hy: 46, fs: 0.46, tilt: -16, sx: -14, bend: -70, maxP: 1, tint: "rgba(185,150,255,0.14)", delay: 1.1,
+      leaf: { at: 0.35, rot: -70, s: 0.75 } },
+    { name: "right", hx: 168, hy: 30, fs: 0.5, tilt: 14, sx: 14, bend: 70, maxP: 1, tint: "rgba(255,170,130,0.12)", delay: 1.7,
+      leaf: { at: 0.3, rot: 62, s: 0.8 } },
+    { name: "main", hx: 0, hy: 0, fs: 0.62, tilt: 0, sx: 0, bend: -20, maxP: 1, tint: null, delay: 0,
+      leaf: { at: 0.3, rot: -58, s: 1 } },
+  ].map((f) => ({ ...f, ph: sr(0, 6), st: { stem: 0, bud: 0, p: 0, glow: 0 }, ...buildPetals() }));
+
+  gsap.ticker.add((time, deltaMs) => {
+    if (!F.on) return;
+    const dt = Math.min(deltaMs / 1000, 0.05);
+
+    // 1) Vẽ lại tối đa 2 đầu hoa đang thay đổi
+    // 1) Mỗi khung hình chỉ vẽ lại 1 đầu hoa (bông thay đổi nhiều nhất)
+    const want = (f) => F.res * (f.st.p >= 1 ? 1 : 0.55);
+    const next = BOUQUET
+      .filter((f) => f.st.bud > 0 && (!f.hc || Math.abs(f.lastRes - want(f)) > 1e-6 || Math.abs(f.st.p - f.lastP) > 0.004))
+      .sort((a, b) => Math.abs(b.st.p - (b.lastP ?? -1)) - Math.abs(a.st.p - (a.lastP ?? -1)))[0];
+    if (next) renderHead(next);
+
+    // 2) Ghép lên màn hình
+    const m = camMap();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    const base = [m.s * DPR, 0, 0, m.s * DPR, (m.ox + m.s * HEAD.x) * DPR, (m.oy + m.s * HEAD.y) * DPR];
+
+    BOUQUET.forEach((fl) => {
+      if (fl.st.stem <= 0) return;
+      ctx.setTransform(...base);
+      ctx.save();
+      headXf(ctx, time, fl);
+      drawStem(ctx, fl);
+      if (fl.st.bud > 0 && fl.hc) {
+        headScale(ctx, time, fl);
+        ctx.drawImage(fl.hc, H.x, H.y, H.w, H.h);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.07 + 0.09 * fl.st.glow;
+        ctx.drawImage(fl.bc, H.x - 36, H.y - 36, H.w + 72, H.h + 72);
+        if (fl.st.glow > 0) {
+          const pulse = reduceMotion ? 1 : 0.85 + Math.sin(time * 1.3 + fl.ph) * 0.15;
+          ctx.globalAlpha = 0.7 * fl.st.glow * pulse;
+          ctx.drawImage(glowSprite, -150, -160, 300, 300);
+        }
+      }
+      ctx.restore();
+    });
+
+    // 3) Bụi sáng
+    if (moteOn) {
+      moteAcc += dt;
+      while (moteAcc > 0.12) {
+        moteAcc -= 0.12;
+        motes.push({ x: rand(-90, 90), y: rand(-40, 20), vx: rand(-14, 14), vy: -rand(25, 50), life: 0, max: rand(3, 5), r: rand(3, 7) });
+      }
+    }
+    if (twinkleOn) {
+      twAcc += dt;
+      if (twAcc > 0.45) { twAcc = 0; twinkles.push({ x: rand(-190, 190), y: rand(-140, 110), life: 0, max: 1.4, s: rand(8, 16) }); }
+    }
+    if (twinkles.length) {
+      ctx.setTransform(...base);
+      for (let i = twinkles.length - 1; i >= 0; i--) {
+        const q = twinkles[i]; q.life += dt;
+        if (q.life >= q.max) { twinkles.splice(i, 1); continue; }
+        const k = Math.sin((q.life / q.max) * Math.PI), sz = q.s * k;
+        ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.life * 2);
+        ctx.globalAlpha = k; ctx.drawImage(starSprite, -sz, -sz, sz * 2, sz * 2); ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (bursts.length) {
+      ctx.setTransform(...base);
+      for (let i = bursts.length - 1; i >= 0; i--) {
+        const q = bursts[i]; q.life += dt;
+        if (q.life >= q.max) { bursts.splice(i, 1); continue; }
+        const u = q.life / q.max, e = 1 - Math.pow(1 - u, 3);
+        ctx.save(); ctx.translate(q.ax * e, -24 + q.ay * e); ctx.rotate(q.rot * e);
+        ctx.globalAlpha = 1 - u; ctx.drawImage(starSprite, -q.s, -q.s, q.s * 2, q.s * 2); ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (motes.length) {
+      ctx.setTransform(...base);
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = motes.length - 1; i >= 0; i--) {
+        const q = motes[i];
+        q.life += dt; q.x += q.vx * dt; q.y += q.vy * dt;
+        if (q.life >= q.max) { motes.splice(i, 1); continue; }
+        const a = Math.min(1, q.life / 0.6) * Math.min(1, (q.max - q.life) / 1.2);
+        ctx.globalAlpha = a * 0.9;
+        ctx.drawImage(moteSprite, q.x - q.r, q.y - q.r, q.r * 2, q.r * 2);
+      }
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    }
+  });
+
+  // Khói: mỗi làn khói được vẽ mờ sẵn MỘT lần vào canvas nhỏ, sau đó chỉ di chuyển bằng
+  // transform (GPU xử lý) thay vì làm mờ lại mỗi khung hình như SVG filter.
+  const smokeLayer = $("smokeLayer");
+  function makeWispSprite() {
+    const W = 260, Hh = 560, c = document.createElement("canvas");
+    c.width = W; c.height = Hh;
+    const g = c.getContext("2d");
+    let x = W / 2, y = Hh - 40;
+    g.beginPath(); g.moveTo(x - 10000, y);
+    for (let k = 0; k < 4; k++) {
+      const nx = W / 2 + rand(-60, 60), ny = y - (Hh - 100) / 4;
+      g.bezierCurveTo(x + rand(-90, 90) - 10000, y - 40, nx + rand(-90, 90) - 10000, ny + 40, nx - 10000, ny);
+      x = nx; y = ny;
+    }
+    // vẽ nét ở ngoài khung, chỉ để lại bóng mờ trong khung (cách làm mờ chạy trên mọi trình duyệt)
+    g.shadowColor = "rgba(238,230,246,1)"; g.shadowBlur = 26; g.shadowOffsetX = 10000;
+    g.lineCap = "round"; g.lineWidth = rand(18, 40); g.strokeStyle = "#fff"; g.stroke();
+    c.className = "wisp";
+    return c;
+  }
+  function wisp(delay) {
+    const c = makeWispSprite();
+    smokeLayer.appendChild(c);
+    const m = camMap();
+    const hx = m.ox + m.s * HEAD.x, hy = m.oy + m.s * HEAD.y;
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const x0 = hx + side * rand(80, Math.max(160, innerWidth * 0.32)) - 130, y0 = hy - 300 + rand(40, 160);
+    const dur = rand(8, 12);
+    gsap.set(c, { x: x0, y: y0 + 60, opacity: 0, rotation: rand(-8, 8) });
+    gsap.timeline({ delay, onComplete: () => { c.remove(); if (!reduceMotion) wisp(0); } })
+      .to(c, { y: y0 - 80, x: x0 + rand(-60, 60), rotation: "+=" + rand(-6, 6), duration: dur, ease: "none" }, 0)
+      .to(c, { opacity: rand(0.18, 0.32), duration: dur * 0.35, ease: "sine.out" }, 0)
+      .to(c, { opacity: 0, duration: dur * 0.4, ease: "sine.in" }, dur * 0.6);
+  }
+  function smoke() {
+    for (let i = 0; i < 4; i++) wisp(1 + i * 1.6);
+  }
+
+  function growGarden() {
+    // Cảnh tối dần, máy quay từ từ tiến lại gần đóa hoa
+    gsap.to(veil, { opacity: 0.9, duration: 3, ease: "power1.inOut" });
+    smoke();
+    const zw = ZOOM.w, zh = ZOOM.h, zoomY = HEAD.y - 0.6 * zh;
+    F.res = targetRes();
+    gsap.to(cam, {
+      x: HEAD.x - zw / 2, y: zoomY, w: zw, h: zh, duration: 8, ease: "power2.inOut", delay: 0.5,
+      onUpdate: applyCam,
+      onComplete: () => { svg.setAttribute("viewBox", `${cam.x} ${cam.y} ${cam.w} ${cam.h}`); applyCam(); },
+    });
+    F.on = true;
+    BOUQUET.forEach((fl) => {
+      const main = fl.name === "main";
+      const tl = gsap.timeline({ delay: fl.delay })
+        .to(fl.st, { stem: 1, duration: main ? 2.2 : 1.9, ease: "power2.out" })
+        .to(fl.st, { bud: 1, duration: 1.4, ease: "back.out(1.3)" }, "-=0.5")
+        .addLabel("open", "+=0.3")
+        .to(fl.st, { p: 1, duration: main ? 7 : 6, ease: "power1.inOut" }, "open")
+        .to(fl.st, { glow: fl.maxP, duration: 3.5, ease: "power2.out" }, "open+=2.5");
+      if (main) tl.call(celebrate, null, "open+=4.2");
+    });
+  }
+
+  // ---------------- Chúc mừng ----------------
+  function star(parent, fill) {
+    return el("path", { d: "M 0 -8 L 2 -2 L 8 0 L 2 2 L 0 8 L -2 2 L -8 0 L -2 -2 Z", fill }, parent);
+  }
+
+  function sparkleBurst() {
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2 + rand(-0.1, 0.1), d = rand(110, 200);
+      bursts.push({ ax: Math.cos(a) * d, ay: Math.sin(a) * d * 0.7, life: 0, max: rand(1.2, 1.9), s: rand(6, 13), rot: rand(1.5, 4.5) });
+    }
+  }
+
+
+  function twinkle() { twinkleOn = true; }
+
+
+  // Bụi sáng li ti bay lên từ lòng hoa
+  function mote() { moteOn = true; }
+  // Cánh hoa rơi: dùng ảnh vẽ sẵn + transform của HTML (GPU), thay vì hàng chục path SVG
+  const rainLayer = $("rainLayer");
+  const petalImgs = PINKS.map((col) => {
+    const c = document.createElement("canvas"); c.width = 40; c.height = 46;
+    const g = c.getContext("2d");
+    g.translate(20, 44); g.scale(0.55, 0.7);
+    g.globalAlpha = 0.55; g.fillStyle = col; g.fill(new Path2D(PEONY));
+    g.globalAlpha = 0.8; g.strokeStyle = "#fff"; g.lineWidth = 1.6; g.stroke(new Path2D(PEONY));
+    return c.toDataURL();
+  });
+  function petalRain() {
+    const img = new Image(); img.src = pick(petalImgs); img.className = "rain-petal";
+    rainLayer.appendChild(img);
+    const sx = rand(0, innerWidth), sc = rand(0.6, 1.1), dur = rand(8, 12);
+    gsap.set(img, { x: sx, y: -60, scale: sc, rotation: rand(0, 360) });
+    gsap.to(img, { y: innerHeight + 60, duration: dur, ease: "none", onComplete: () => { gsap.killTweensOf(img); img.remove(); } });
+    gsap.to(img, { x: sx + rand(-120, 120), duration: dur / 3, ease: "sine.inOut", yoyo: true, repeat: 3 });
+    gsap.to(img, { rotation: "+=" + rand(200, 600), duration: dur, ease: "none" });
+    gsap.to(img, { scaleX: sc * 0.25, duration: rand(0.7, 1.2), ease: "sine.inOut", yoyo: true, repeat: -1 });
+    gsap.delayedCall(rand(0.3, 0.55), petalRain);
+  }
+
+  function revealGreeting() {
+    $("toLine").textContent = `Gửi ${CONFIG.name},`;
+    const msg = $("msg");
+    msg.textContent = CONFIG.message;
+    const hearts = document.createElement("span");
+    hearts.className = "hearts";
+    const heartEls = Array.from(CONFIG.hearts).map((h) => {
+      const sp = document.createElement("span"); sp.textContent = h; hearts.appendChild(sp); return sp;
+    });
+    msg.appendChild(hearts);
+    $("fromLine").textContent = CONFIG.from ? `${CONFIG.from}` : "";
+
+    const title = $("title");
+    const text = title.textContent.trim();
+    title.textContent = "";
+    title.setAttribute("aria-label", text);
+    const chars = [];
+    text.split(" ").forEach((w, wi, arr) => {
+      const word = document.createElement("span");
+      word.className = "word"; word.setAttribute("aria-hidden", "true");
+      Array.from(w).forEach((c) => {
+        const s = document.createElement("span");
+        s.className = "ch"; s.textContent = c;
+        word.appendChild(s); chars.push(s);
+      });
+      title.appendChild(word);
+      if (wi < arr.length - 1) title.appendChild(document.createTextNode(" "));
+    });
+
+    gsap.set(greet, { autoAlpha: 1 });
+    gsap.timeline()
+      // Thiệp lật mở từ trên xuống
+      .from("#card", { rotationX: -85, y: -24, opacity: 0, transformPerspective: 900, transformOrigin: "50% 0%",
+        duration: 1.1, ease: "back.out(1.4)" })
+      .from("#toLine", { y: 14, opacity: 0, duration: 0.6, ease: "power2.out" })
+      .from(chars, { y: 40, opacity: 0, scale: 0.4, rotation: () => rand(-25, 25), duration: 0.8,
+        ease: "back.out(2)", stagger: 0.05 }, "-=0.2")
+      .from("#msg", { y: 16, opacity: 0, duration: 0.8, ease: "power2.out" }, "-=0.3")
+      .from(heartEls, { scale: 0, opacity: 0, duration: 0.5, ease: "back.out(3)", stagger: 0.15 }, "-=0.2")
+      .from("#fromLine", { opacity: 0, duration: 0.6 }, "-=0.3")
+      .add(() => {
+        if (reduceMotion) return;
+        // Tim đập nhẹ lần lượt
+        gsap.to(heartEls, { scale: 1.25, duration: 0.35, ease: "sine.inOut", yoyo: true, repeat: -1, repeatDelay: 0.6, stagger: 0.18 });
+        // Chữ nhún nhảy nhẹ theo làn sóng
+        gsap.to(chars, { y: -6, duration: 0.9, ease: "sine.inOut", stagger: { each: 0.08, repeat: -1, yoyo: true } });
+      });
+  }
+
+  function celebrate() {
+    sparkleBurst();
+    revealGreeting();
+    if (!reduceMotion) {
+      petalRain();
+      twinkle();
+      mote();
+    }
+    gsap.to(replayBtn, { autoAlpha: 1, duration: 0.6, delay: 4 });
+  }
+
+  replayBtn.addEventListener("click", () => location.reload());
+
+  // ---------------- Điều khiển ----------------
+  svg.addEventListener("pointerdown", (e) => {
+    if (state.fired || (e.button !== undefined && e.button !== 0)) return;
+    svg.setPointerCapture(e.pointerId);
+    start = toSvg(e);
+    state.dragging = true;
+    svg.classList.add("drawing");
+    gsap.killTweensOf(state);
+    gsap.killTweensOf(cue);
+    gsap.set(cue, { autoAlpha: 0 });
+  });
+  svg.addEventListener("pointermove", (e) => {
+    if (!state.dragging) return;
+    const cur = toSvg(e);
+    const vx = start.x - cur.x, vy = start.y - cur.y, d = Math.hypot(vx, vy);
+    state.pull = Math.min(MAX_PULL, d * 0.8);
+    if (d > 8) state.angle = clamp((Math.atan2(vy, vx) * 180) / Math.PI, -80, 30);
+    drawBow();
+  });
+  function endDrag() {
+    if (!state.dragging) return;
+    state.dragging = false;
+    svg.classList.remove("drawing");
+    fire();
+    if (!state.fired) startCue();
+  }
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+
+  svg.addEventListener("keydown", (e) => {
+    if (state.fired) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (!e.repeat && !state.keyDraw) { gsap.killTweensOf(state); state.keyDraw = true; }
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      state.angle = clamp(state.angle + (e.key === "ArrowUp" ? -3 : 3), -80, 30);
+      drawBow();
+    }
+  });
+  svg.addEventListener("keyup", (e) => {
+    if (e.code === "Space" && state.keyDraw) { state.keyDraw = false; fire(); }
+  });
+
+  // ---------------- Mở màn ----------------
+  drawBow();
+  gsap.from(recoil, { autoAlpha: 0, x: -60, duration: 1, ease: "power3.out", delay: 0.2 });
+  gsap.from(hint, { autoAlpha: 0, y: -10, duration: 0.8, delay: 1.2, ease: "power2.out" });
+  function startCue() {
+    if (reduceMotion) { gsap.set(cue, { autoAlpha: 1 }); return; }
+    gsap.fromTo(cue, { scale: 1, autoAlpha: 1 },
+      { scale: 2.2, autoAlpha: 0, duration: 1.4, repeat: -1, ease: "power1.out", transformOrigin: "50% 50%" });
+  }
+  startCue();
+  gsap.from(bunch, {
+    y: 340, autoAlpha: 0, duration: 1.8, ease: "power2.out",
+    onComplete: () => {
+      if (reduceMotion || state.popped) return;
+      gsap.to(bunch, { y: -10, x: 5, duration: 2.6, ease: "sine.inOut", yoyo: true, repeat: -1 });
+    },
+  });
+})();
+</script>
+</body>
+</html>
