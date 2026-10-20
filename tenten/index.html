@@ -215,7 +215,7 @@
 <canvas id="flowerCanvas" aria-hidden="true"></canvas>
 <div id="rainLayer" aria-hidden="true"></div>
 
-<p class="hint" id="hint">Kéo dây cung về phía sau rồi thả tay</p>
+<p class="hint" id="hint">Kéo dây cung về phía sau rồi thả tay để mở món quà</p>
 
 <div class="greet" id="greet" aria-live="polite">
   <div class="card" id="card">
@@ -485,9 +485,9 @@
   // - Hiệu ứng phát sáng dùng ảnh thu nhỏ rồi phóng to (thay cho bộ lọc blur tốn kém).
   const cvs = $("flowerCanvas"), ctx = cvs.getContext("2d");
   const temp = document.createElement("canvas"), tctx = temp.getContext("2d");
-  let DPR = Math.min(1.5, window.devicePixelRatio || 1);
+  let DPR = Math.min(3, window.devicePixelRatio || 1);
   function fitCanvas() {
-    DPR = Math.min(1.5, window.devicePixelRatio || 1);
+    DPR = Math.min(3, window.devicePixelRatio || 1);
     cvs.width = Math.round(innerWidth * DPR); cvs.height = Math.round(innerHeight * DPR);
   }
   fitCanvas();
@@ -497,7 +497,8 @@
   const STEM_BASE_Y = SOIL_Y - HEAD.y;  // gốc thân (đất) trong hệ toạ độ hoa
   const PIVOT_Y = 55;                   // điểm nối thân - đầu hoa (đơn vị cánh)
   const H = { x: -290, y: -300, w: 580, h: 620 }; // khung vẽ của một đầu hoa (đơn vị cánh)
-  const ZOOM = { w: 760, h: 532 };
+  // Màn hình dọc (điện thoại) thì zoom sát hơn để bó hoa to, rõ
+  const ZOOM = innerHeight > innerWidth ? { w: 640, h: 448 } : { w: 760, h: 532 };
   const F = { on: false, res: 1 };
 
   // "Máy quay": thay vì đổi viewBox mỗi khung hình (buộc trình duyệt vẽ lại toàn bộ SVG),
@@ -518,7 +519,8 @@
   addEventListener("resize", applyCam);
   function targetRes() {
     const scale = Math.min(innerWidth / ZOOM.w, innerHeight / ZOOM.h); // px CSS / đơn vị khi đã zoom
-    return Math.min(2.2, scale * DPR);
+    // vẽ dư 1.25 lần so với độ phân giải thật của màn hình để cánh và gân luôn sắc nét
+    return Math.min(3.6, scale * DPR * 1.25);
   }
 
   // Ảnh quầng sáng vẽ sẵn một lần
